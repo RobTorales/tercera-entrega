@@ -1,8 +1,10 @@
 import AuthServices from "../services/auth.services.js";
+import CartServices from "../services/cart.services.js";
 
 class AuthController {
     constructor (){
         this.AuthServices = new AuthServices();
+        this.cartService = new CartServices();
     }
 
     loginUser = async (req, res) => {
@@ -20,7 +22,7 @@ class AuthController {
         let token = jwt.sign({ email, password, role: user.role }, PRIVATE_KEY, { expiresIn: "24h" });
         res.cookie("robCookieToken", token, { maxAge: 3600 * 1000, httpOnly: true });
     
-    
+        this.cartServices.newCart();    
         return res.status(200).json({ status: "success", redirect: "/products" });
     }
 
