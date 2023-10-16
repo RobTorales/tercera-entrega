@@ -4,25 +4,16 @@ import CartServices from "../services/cart.services.js";
 class AuthController {
     constructor (){
         this.AuthServices = new AuthServices();
-        this.cartService = new CartServices();
+        this.CartServices = new CartServices();
     }
 
     loginUser = async (req, res) => {
-        const { email, pass: password } = req.body;
-    
-    
-        let user = await userModel.findOne({ email: email });
-    
-    
+        const { email, password } = req.body;
+        let user = await this.AuthServices.LoginUser(email, password);
         if (!user) {
             return res.status(401).send({ status: "error", message: "Error! El usuario no existe!" });
         }
-    
-    
-        let token = jwt.sign({ email, password, role: user.role }, PRIVATE_KEY, { expiresIn: "24h" });
-        res.cookie("robCookieToken", token, { maxAge: 3600 * 1000, httpOnly: true });
-    
-        this.cartServices.newCart();    
+        this.CartServices.newCart();    
         return res.status(200).json({ status: "success", redirect: "/products" });
     }
 
@@ -31,9 +22,6 @@ class AuthController {
         res.redirect("/");
     }
 
-    
-
-    
     githubCallback = async (req, res) => {
         req.session.user = req.user;
         req.session.loggedIn = true;

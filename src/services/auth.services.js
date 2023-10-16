@@ -15,11 +15,8 @@ class AuthServices {
           return null;
         }
     
-        const token = jwt.sign(
-          { id: user._id, email: user.email, role: user.role },
-          this.secretKey,
-          { expiresIn: '24h' }
-        );
+        let token = jwt.sign({ email, password, role: user.role }, PRIVATE_KEY, { expiresIn: "24h" });
+        res.cookie("robCookieToken", token, { maxAge: 3600 * 1000, httpOnly: true });
     
         return { user, token };
       }
