@@ -1,7 +1,7 @@
 import { error } from "winston";
 import { ticketModel } from "./models/ticket.model";
 
-export default class TicketManager {
+ class TicketManager {
     async getAll(){
         try {
             const tickets = await ticketModel.find()
@@ -25,3 +25,5 @@ export default class TicketManager {
         }
     }
 }
+
+export default TicketManager;

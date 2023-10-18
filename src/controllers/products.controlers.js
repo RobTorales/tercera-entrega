@@ -1,136 +1,163 @@
-import ProductServices from "../services/product.services.js";
+import ProductService from "../services/product.services.js";
 
-class ProductController{
-    constructor () {
-        this.ProductServices = new ProductServices();
+class ProductController {
+    constructor() {
+        this.productService = new ProductService();
     }
 
-    getProducts = async (req, res) => {
-        const products = await this.ProductServices.getProducts(req.query);
-        res.send({products});
+    async getProducts(req, res) {
+        try {
+            const products = await this.productService.getProducts(req.query);
+            res.send(products);
+        } catch (error) {
+            this.handleError(res, "Error al obtener productos", error);
+        }
     }
 
-    getProductsById = async (req, res) => {
-        let pid = req.params.pid;
-        const products = await this.ProductServices.getProductById(pid);
+    async getProductbyId(req, res) {
+        try {
+            const pid = req.params.pid;
+            const product = await this.productService.getProductbyId(pid);
+            if (!product) {
+                return res.status(404).send({ status: "error", message: "Producto no encontrado" });
+            }
+            res.json(product);
+        } catch (error) {
+            this.handleError(res, "Error al encontrar producto por su ID", error);
+        }
+    }
+
+    async addProduct(req, res) {
+        const { title, description, code, price, stock, category, thumbnail } = req.body;
+        if (!this.validateRequiredFields(req.body, ["title", "description", "code", "price", "stock", "category", "thumbnail"])) {
+            return res.status(400).send({ status: "error", message: "Faltan campos requeridos" });
+        }
+        try {
+            const add = await this.productService.addProduct({
+                title,
+                description,
+                code,
+                price,
+                stock,
+                category,
+                thumbnail,
+            });
+            if (add && add._id) {
+                console.log("Producto añadido correctamente:",add);
+                res.send({
+                status: "ok",
+                message: "El Producto se agregó correctamente!",
+                });
+                socketServer.emit("product_created", {
+                _id: add._id,
+                title,
+                description,
+                code,
+                price,
+                stock,
+                category,
+                thumbnail,
+                });
+                return;
+            } else {
+                this.handleError(res, "No se pudo agregar el producto");
+            }
+        } catch (error) {
+            this.handleError(res, "Error al agregar producto", error);
+        }
+    }
+
+    async updateProduct(req, res) {
+        try {
+            const {
+                title,
+                description,
+                code,
+                price,
+                status,
+                stock,
+                category,
+                thumbnail,
+              } = req.body;
+              const pid = req.params.pid;
         
-        res.send({products})
-    }
-
-    addProduct = async (req, res) => {
-        let {title, description, code, price, status, stock, category, thumbnails} = req.body;
-    
-        if (!title) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Title!"});
-            return false;
-        }
-    
-        if (!description) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Description!"});
-            return false;
-        }
-    
-        if (!code) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Code!"});
-            return false;
-        }
-    
-        if (!price) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Price!"});
-            return false;
-        }
-    
-        status = !status && true;
-    
-        if (!stock) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Stock!"});
-            return false;
-        }
-    
-        if (!category) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Category!"});
-            return false;
-        }
-    
-        if (!thumbnails) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Thumbnails!"});
-            return false;
-        } else if ((!Array.isArray(thumbnails)) || (thumbnails.length == 0)) {
-            res.status(400).send({status:"error", message:"Error! Debe ingresar al menos una imagen en el Array Thumbnails!"});
-            return false;
-        }
-    
-        const result = await this.ProductServices.addProduct({title, description, code, price, status, stock, category, thumbnails}); 
-    
-        if (result) {
-            res.send({status:"ok", message:"El Producto se agregó correctamente!"});
-        } else {
-            res.status(500).send({status:"error", message:"Error! No se pudo agregar el Producto!"});
-        }
-    }
-    updateProduct = async (req, res) => {
-        let pid = req.params.pid;
-        let {title, description, code, price, status, stock, category, thumbnails} = req.body;
-    
-        if (!title) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Title!"});
-            return false;
-        }
-    
-        if (!description) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Description!"});
-            return false;
-        }
-    
-        if (!code) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Code!"});
-            return false;
-        }
-    
-        if (!price) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Price!"});
-            return false;
-        }
-    
-        status = !status && true;
-    
-        if (!stock) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Stock!"});
-            return false;
-        }
-    
-        if (!category) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Category!"});
-            return false;
-        }
-    
-        if (!thumbnails) {
-            res.status(400).send({status:"error", message:"Error! No se cargó el campo Thumbnails!"});
-            return false;
-        } else if ((!Array.isArray(thumbnails)) || (thumbnails.length == 0)) {
-            res.status(400).send({status:"error", message:"Error! Debe ingresar al menos una imagen en el Array Thumbnails!"});
-            return false;
-        }
-    
-        const result = await this.ProductServices.updateProduct(pid, {title, description, code, price, status, stock, category, thumbnails});
-    
-        if (result) {
-            res.send({status:"ok", message:"El Producto se actualizó correctamente!"});
-        } else {
-            res.status(500).send({status:"error", message:"Error! No se pudo actualizar el Producto!"});
+              const wasUpdated = await this.productService.updateProduct(pid, {
+                title,
+                description,
+                code,
+                price,
+                status,
+                stock,
+                category,
+                thumbnail,
+              });
+        
+              if (wasUpdated) {
+                res.send({
+                  status: "ok",
+                  message: "El Producto se actualizó correctamente!",
+                });
+                socketServer.emit("product_updated");
+              } else {
+                res.status(500).send({
+                  status: "error",
+                  message: "Error! No se pudo actualizar el Producto!",
+                });
+              }
+        } catch (error) {
+            this.handleError(res, "Error Interno", error);
         }
     }
 
-    deleteProduct = async (req, res) => {
-        let pid = req.params.pid;
-        const result = await this.ProductServices.deleteProduct(pid)
-    
-        if (result) {
-            res.send({status:"ok", message:"El Producto se eliminó correctamente!"});
-        } else {
-            res.status(500).send({status:"error", message:"Error! No se pudo eliminar el Producto!"});
+    async deleteProduct(req, res) {
+        try {
+            const pid = req.params.pid;
+
+            if (!mongoose.Types.ObjectId.isValid(pid)) {
+                console.log("ID del producto no válido");
+                res.status(400).send({
+                status: "error",
+                message: "ID del producto no válido",
+                });
+                return;
+            }
+
+            const product = await this.productService.getProductById(pid);
+
+            if (!product) {
+                console.log("Producto no encontrado");
+                res.status(404).send({
+                status: "error",
+                message: "Producto no encontrado",
+                });
+                return;
+            }
+
+            const wasDeleted = await this.productService.deleteProduct(pid);
+
+            if (wasDeleted) {
+                console.log("Producto eliminado exitosamente");
+                res.send({
+                status: "ok",
+                message: "Producto eliminado exitosamente",
+                });
+                socketServer.emit("product_deleted", { _id: pid });
+            } else {
+                console.log("Error eliminando el producto");
+                res.status(500).send({
+                status: "error",
+                message: "Error eliminando el producto",
+                });
+            }
+        } catch (error) {
+            this.handleError(res, "Error Interno", error);
         }
+    }
+
+    handleError(res, message, error) {
+        console.error(error);
+        res.status(500).send({ status: "error", message });
     }
 }
 
-export default ProductController;
+export default new ProductController();

@@ -4,11 +4,11 @@ import CartServices from "../services/cart.services.js";
 
 class CartController {
     contructor (){
-        this.CartServices = new CartServices ();
+        this.cartServices = new CartServices ();
     }
 
     newCart = async (req, res) => {
-        const cart = await this.CartServices.newCart();
+        const cart = await this.cartServices.newCart();
     
         if (cart) {
             res.send({status:"ok", message:"El Carrito se creó correctamente!", id:cart._id});
@@ -19,7 +19,7 @@ class CartController {
 
     getCart = async (req, res) => {
         const cid = req.params.cid;
-        const cart = await this.CartServices.getCart(cid);
+        const cart = await this.cartServices.getCart(cid);
     
         if (cart) {
             res.send({products:cart.products});
@@ -31,7 +31,7 @@ class CartController {
     addProduct = async (req, res) => {
         const cid = req.params.cid;
         const pid = req.params.pid;
-        const result = await this.CartServices.addProduct(cid, pid);
+        const result = await this.cartServices.addProduct(cid, pid);
     
         if (result) {
             res.send({status:"ok", message:"El producto se agregó correctamente!"});
@@ -43,7 +43,7 @@ class CartController {
     updateCart = async (req, res) => {
         const cid = req.params.cid;
         const products = req.body.products;
-        const result = await this.CartServices.updateCart(cid, products);
+        const result = await this.cartServices.updateCart(cid, products);
     
         if (result) {
             res.send({status:"ok", message:"El producto se agregó correctamente!"});
@@ -56,7 +56,7 @@ class CartController {
         const cid = req.params.cid;
         const pid = req.params.pid;
         const quantity = req.body.quantity;
-        const result = await this.CartServices.updateQuantity(cid, pid, quantity);
+        const result = await this.cartServices.updateQuantity(cid, pid, quantity);
     
         if (result) {
             res.send({status:"ok", message:"El producto se actualizó correctamente!"});
@@ -68,7 +68,7 @@ class CartController {
     deleteProduct = async (req, res) => {
         const cid = req.params.cid;
         const pid = req.params.pid;
-        const result = await this.CartServices.deleteProduct(cid, pid);
+        const result = await this.cartServices.deleteProduct(cid, pid);
     
         if (result) {
             res.send({status:"ok", message:"El producto se eliminó correctamente!"});
@@ -79,7 +79,7 @@ class CartController {
 
     cleanCart = async (req, res) => {
         const cid = req.params.cid;
-        const result = await this.CartServices.cleanCart(cid);
+        const result = await this.cartServices.cleanCart(cid);
     
         if (result) {
             res.send({status:"ok", message:"El carrito se vació correctamente!"});
@@ -89,78 +89,68 @@ class CartController {
     }
 
     createPurchaseTicket = async (req, res) => {
-        if(!req.user || !req.user.id){
-            return res-status(400).json({error:"Usuario no definido"})
-        }
-
-        const cart = await this.CartServices.getCart(req.params.cid)
-
-        if(!cart){
-            return res.status(404).json({error: "Carrito no encontrado"});
-        }
-
-        const ProductManager = new ProductManager();
-        const FailedProducts = [];
-        const succesfulProducts = [];
-
-        for(const item of cart.products){
-            const product = await ProductManager.getProductById(item.product);
-
-            if(!product){
-                FailedProducts.push(item);
-                continue;
+        try {
+            if (!req.user || !req.user.id) {
+                throw new Error("Usuario no definido");
             }
-
-            if (product.stock < item.quantity) {
-                console.error(
-                  `Stock insuficiente para el producto ${JSON.stringify(
-                    item.product
-                  )}`
-                );
-                FailedProducts.push(item);
-            }else{
-                succesfulProducts.push(item);
-                const newStock = product.stock - item.quantity;
-                await ProductManager.updateProduct(item.product, {stock: newStock});
+    
+            const cart = await this.cartServices.getCart(req.params.cid);
+    
+            if (!cart) {
+                throw new Error("Carrito no encontrado");
             }
-
+    
+            const ProductManager = new ProductManager();
+            const TicketController = new TicketController();
+            const FailedProducts = [];
+            const succesfulProducts = [];
+    
+            await Promise.all(
+                cart.products.map(async (item) => {
+                    const product = await ProductManager.getProductById(item.product);
+    
+                    if (!product || product.stock < item.quantity) {
+                        FailedProducts.push(item);
+                    } else {
+                        succesfulProducts.push(item);
+                        const newStock = product.stock - item.quantity;
+                        await ProductManager.updateProduct(item.product, { stock: newStock });
+                    }
+                })
+            );
+    
+            if (succesfulProducts.length === 0) {
+                throw new Error("No se pudo comprar ningún producto");
+            }
+    
+            const totalAmount = succesfulProducts.reduce((total, product) => {
+                return total + product.product.price * product.quantity;
+            }, 0);
+    
+            const ticketData = {
+                code: uuidv4(),
+                purchase_datetime: new Date(),
+                amount: totalAmount,
+                purchaser: req.user.email,
+            };
+    
+            const ticketCreated = await TicketController.createTicket({
+                body: ticketData,
+            });
+    
             await cartModel.updateOne(
-                { __id: req.params.cid },
+                { _id: req.params.cid },
                 { products: FailedProducts }
             );
-
-            if (succesfulProducts.length === 0){
-                return res.status(400).json({
-                    error: "No se puso comprar ningun producto",
-                    FailedProducts,
-                });
-            }
-
-            const totalAmount = succesfulProducts.reduce((total, products) => {
-                return total + product.product.price * product.quantity;            
-        },0)
-
-        console.log("Totale Amount calculado:", totalAmount);
-
-        const ticketData = {
-            code: uuidv4(),
-            purchase_datetime: new Date(),
-            amount: totalAmount,
-            purchaser: req.user.email,
-          };
     
-          console.log("Ticket Data justo antes de crear el ticket:", ticketData);
-          const ticketCreated = await TicketController.createTicket({
-            body: ticketData,
-          });
-          console.log("Ticket Creado:", ticketCreated);
-    
-          res.json({
-            status: "success",
-            message: "Compra realizada con éxito",
-            ticket: ticketCreated,
-            failedProducts: FailedProducts.length > 0 ? FailedProducts : undefined,
-          });
+            res.json({
+                status: "success",
+                message: "Compra realizada con éxito",
+                ticket: ticketCreated,
+                failedProducts: FailedProducts.length > 0 ? FailedProducts : undefined,
+            });
+        } catch (error) {
+            res.status(400).json({ error: error.message });
         }
     }
 
