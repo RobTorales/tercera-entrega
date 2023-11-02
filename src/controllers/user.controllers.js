@@ -6,7 +6,23 @@ class UserController{
     }
 
     Register = async (req, res) => {
-        return res.redirect("/login");
+        const { first_name, last_name, email, age, password, role, isAdmin,cart } = req.body;
+        const response = await this.userService.registerUser({
+          first_name,
+          last_name,
+          email,
+          age,
+          password,
+          role,
+          isAdmin,
+          cart,
+        });
+     
+        return res.status(response.status === "success" ? 200 : 400).json({
+          status: response.status,
+          data: response.user,
+          redirect: response.redirect,
+        });
     }
 
     restorePassword = async (req, res) => {
@@ -22,7 +38,16 @@ class UserController{
     }
 
     current = async (req, res) => {
-        res.send({status:"OK", payload:req.user});
+        if (req.session.user) {
+            return res.send({
+              status: "OK",
+              payload: new UserResponse(req.session.user),
+            });
+          } else {
+            return res
+              .status(401)
+              .send({ status: "Error", message: "No authorized" });
+          }
     }
 }
 

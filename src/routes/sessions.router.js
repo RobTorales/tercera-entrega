@@ -31,7 +31,7 @@ router.get(
 router.post("/logout", (req, res) => authController.logout(req, res));
 router.get("/current", passportCall("jwt"), authorization("user"), (req, res) => {
   console.log(req.cookies); 
-  userController.currentUser(req, res);
+  userController.current(req, res);
 });
 
  
