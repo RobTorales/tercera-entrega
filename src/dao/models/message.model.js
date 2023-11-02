@@ -7,3 +7,4 @@ const messageSchema = new mongoose.Schema({
 });
 
 export const messageModel = mongoose.model("messages", messageSchema);
+export default messageModel;

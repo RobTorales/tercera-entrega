@@ -8,9 +8,12 @@ import mongoose from "mongoose";
 import MongoStore from "connect-mongo";
 import ProductManager from "./dao/ProductManager.js";
 import ChatManager from "./dao/ChatManager.js";
+import MessagesManager from "./dao/messagesmanager.js";
 import productsRouter from "./routes/products.router.js";
 import cartsRouter from "./routes/carts.router.js";
 import sessionsRouter from "./routes/sessions.router.js";
+import emailRouter from "./routes/email.router.js";
+import smsRouter from "./routes/sms.router.js";
 import viewsRouter from "./routes/views.router.js";
 import session from "express-session";
 import { MONGODB_CNX_STR, PORT, SECRET_SESSIONS } from "./config/config.js";
@@ -19,6 +22,7 @@ import initializeGitHubPassport from "./github/ingreso.github.js";
 import passport from "passport";
 import cors from "cors";
 import initializePassport from "./config/passport.config.js";
+import "./dao/dbConfig.js"
 
 const app = express();
 const puerto = 8080;
@@ -32,6 +36,7 @@ const httpServer = app.listen(PORT, () => {console.log(`conectado a ${PORT}`)})
 const socketServer = new Server(httpServer);
 const PM = new ProductManager();
 const CM = new ChatManager();
+const MM = new MessagesManager();
 
 app.set("views", __dirname + "/views");
 app.engine('handlebars', expressHandlebars.engine({
@@ -55,9 +60,12 @@ app.set("view engine", "handlebars");
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
 app.use(express.static(__dirname + "/public"));
+app.use(morgan('dev'))
 app.use("/api/products/", productsRouter);
 app.use("/api/carts/", cartsRouter);
 app.use("/api/sessions/", sessionsRouter);
+app.use("/api/sms/", smsRouter);
+app.use("/api/email/", emailRouter);
 app.use("/", viewsRouter);
 
 mongoose.connect("mongodb+srv://roberto1608torales:roberto1608@cluster0.ggriuqe.mongodb.net/ecommerce?retryWrites=true&w=majority");
@@ -85,5 +93,14 @@ socketServer.on("connection", (socket) => {
         CM.createMessage(data);
         const messages = await CM.getMessages();
         socket.emit("messages", messages);
+    });
+    socket.on("disconnect", ()=>{
+        console.log("Usuario desconectado");
+        });
+    
+      socket.on("mensaje", async (info) =>{
+        console.log(info);
+        await MM.createMessage(info);
+        socketServer.emit("chat", await MM.getMessages());
     });
 });
