@@ -12,5 +12,7 @@ cartsRouter.put("/:cid/products/:pid", cartController.updateQuantity);
 cartsRouter.delete("/:cid/products/:pid", cartController.deleteProduct);
 cartsRouter.delete("/:cid", cartController.cleanCart);
 cartsRouter.post("/cid/purchase", cartController.createPurchaseTicket);
+cartsRouter.get('/:cid/purchase', cartController.purchese);
+cartsRouter.get('/:cid/purchase/ticket', cartController.ticketEnd);
 
 export default cartsRouter;

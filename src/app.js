@@ -20,6 +20,7 @@ import { MONGODB_CNX_STR, PORT, SECRET_SESSIONS } from "./config/config.js";
 import cookieParser from "cookie-parser";
 import initializeGitHubPassport from "./github/ingreso.github.js";
 import passport from "passport";
+import morgan from "morgan";
 import cors from "cors";
 import initializePassport from "./config/passport.config.js";
 import "./dao/dbConfig.js"
