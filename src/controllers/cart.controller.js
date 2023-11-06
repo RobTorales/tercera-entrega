@@ -12,6 +12,7 @@ class CartController {
 
     newCart = async (req, res) => {
         const cart = await this.cartServices.newCart();
+        res.send(cart); 
     
         if (cart) {
             res.send({status:"ok", message:"El Carrito se creó correctamente!", id:cart._id});
@@ -238,7 +239,6 @@ class CartController {
               let cartConStock = [];
               let cartSinStock = [];
         
-              /* Separo los productos con Stock y Sin stock */
               cartFound.products.forEach((item) => {
                 const idProduct = item._id._id.toString();
                 const title = item._id.title;
